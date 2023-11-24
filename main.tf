@@ -7,7 +7,7 @@ terraform { // terraform block defines the version of terraform to be used and t
     aws = {
       source  = "hashicorp/aws" //  location of the provider plugin.
       version = "~> 5.0"        //  Terraform registry path
-    }  
+    }
 
   }
 }
@@ -27,22 +27,44 @@ resource "aws_instance" "terraformInstance" {
   tags = {
     Name = "terraformGettingStarted"
   }
-  count = 2
-  vpc_security_group_ids = [ aws_security_group.terraformSG.id ]
+  vpc_security_group_ids = [aws_security_group.terraformSG.id]
 
 }
 resource "aws_security_group" "terraformSG" {
 
-  name =   "terraformSG" 
+  name        = "terraformSG"
   description = "Allow HTTP and SSH inbound traffic"
   ingress {
     description = "HTTP from VPC"
     from_port   = 80
-    to_port     = 80  
+    to_port     = 80
     protocol    = "tcp"
   }
+}
+resource "aws_ebs_volume" "terraformEBS" {
 
+  availability_zone = "us-east-1a"
+  size              = 2
+  tags = {
+    name        = "terraformEBS"
+    description = "EBS volume created from terraform"
+  }
   
+}
+
+// Data sources allow Terraform to use information defined outside of Terraform.
+data "aws_ami" "MyAmiId" {
+
+  most_recent = true
+  owners      = ["amazon"]
 
 }
+// Output block defines values that are highlighted to the user when Terraform applies the configuration.
+output "AMI_ID" {
+
+  value       = data.aws_ami.MyAmiId.id
+  description = "value of the AMI id"
+
+}
+
 
