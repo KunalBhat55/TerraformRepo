@@ -24,39 +24,42 @@ resource "aws_instance" "terraformInstance" {
   ami           = "ami-05c13eab67c5d8861"
   instance_type = "t2.micro"
   tags = {
-    Name = "terraformGettingStarted"
+    Name = each.key
   }
   vpc_security_group_ids = [aws_security_group.terraformSG.id]
-  # connection {
-  #   type        = "ssh"
-  #   user        = "ec2-user"
-  #   private_key = file("C:/Users/kunal/Desktop/terraform.pem")
-  #   host        = self.public_ip
-  # }
+  for_each               = toset(["Dev", "Test", "Prod"]) // for_each creates multiple instances of the resource
+  
+  # provisioner are used to execute scripts on the local machine or on a remote machine.
+  provisioner "local-exec" {
+    command = "echo `Hello Instance!!`" // local-exec provisioner invokes a local executable after a resource is created.
+  }
 
 }
+# S3 bucket
 resource "aws_s3_bucket" "Bucket" {
-  
+
   bucket = "terraform-bucket-123456789"
-  
+
 }
 resource "aws_s3_bucket_lifecycle_configuration" "BucketLifecycle" {
-  
+
   bucket = aws_s3_bucket.Bucket.id
   rule {
     status = "Enabled"
-    id = "Rule-1"
+    id     = "Rule-1"
     expiration {
       days = 80
     }
   }
-   
-  
+
 }
 
 # VPC
 resource "aws_vpc" "VPC" {
   cidr_block = "192.168.0.0/16"
+  tags = {
+    Name = "terraformVPC"
+  }
 }
 
 # Security Group
@@ -69,13 +72,16 @@ resource "aws_security_group" "terraformSG" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = [ "0.0.0.0/0" ]
+    cidr_blocks = ["0.0.0.0/0"]
   }
   vpc_id = aws_vpc.VPC.id
+
   lifecycle {
-    create_before_destroy = true
+    create_before_destroy = true  // This will create the new resource before destroying the old one
+    prevent_destroy       = false // This will prevent the resource from being destroyed
   }
 }
+
 
 # IGW
 resource "aws_internet_gateway" "IGW" {
@@ -84,10 +90,10 @@ resource "aws_internet_gateway" "IGW" {
 
 # Subnet
 resource "aws_subnet" "SUBNET" {
- 
- vpc_id = aws_vpc.VPC.id  
- map_public_ip_on_launch = true
-  
+
+  vpc_id                  = aws_vpc.VPC.id
+  map_public_ip_on_launch = true
+
 }
 
 # EBS
@@ -99,9 +105,8 @@ resource "aws_ebs_volume" "terraformEBS" {
     name        = "terraformEBS"
     description = "EBS volume created from terraform"
   }
-  
-  
 }
+
 
 // Data sources allow Terraform to use information defined outside of Terraform.
 data "aws_ami" "MyAmiId" {
